@@ -1,12 +1,56 @@
 import React, { useState, useEffect } from "react";
 import "./App.css";
-import { Button, Typography, Stack } from "@mui/material";
+import {
+  Button,
+  Typography,
+  Stack,
+  MenuItem,
+  Select,
+  SelectChangeEvent,
+  ThemeProvider,
+  createTheme,
+  CssBaseline,
+} from "@mui/material";
 import Alert from "@mui/material/Alert";
 import {
   StyledTextField,
   LeaderboardList,
   ScoreEntry,
 } from "./components/LeaderboardComponents";
+
+const darkTheme = createTheme({
+  palette: {
+    mode: "dark",
+    primary: {
+      main: "#90caf9",
+    },
+    secondary: {
+      main: "#f48fb1",
+    },
+    background: {
+      default: "#282c34",
+      paper: "#282c34",
+    },
+  },
+  components: {
+    MuiSelect: {
+      styleOverrides: {
+        icon: {
+          color: "rgba(255, 255, 255, 0.7)",
+        },
+      },
+    },
+    MuiMenuItem: {
+      styleOverrides: {
+        root: {
+          "&:hover": {
+            backgroundColor: "rgba(255, 255, 255, 0.08)",
+          },
+        },
+      },
+    },
+  },
+});
 
 type InfoMessage = {
   severity: "success" | "info" | "warning" | "error";
@@ -18,6 +62,7 @@ function App() {
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [teamName, setTeamName] = useState<string>("");
+  const [house, setHouse] = useState<string | undefined>();
   const [infoMessage, setInfoMessage] = useState<InfoMessage | null>(null);
   const [data, setData] = useState<ScoreEntry[] | null>(null);
 
@@ -30,11 +75,11 @@ function App() {
   }, []);
 
   const updateData = (newData: ScoreEntry[]) => {
-    if (!data) return;
+    // if (!data) return;
     newData.sort((a, b) => Number(a.time) - Number(b.time));
+    setData(newData);
     const jsonData = JSON.stringify(newData);
     localStorage.setItem("data", jsonData);
-    setData(newData);
   };
 
   useEffect(() => {
@@ -71,6 +116,7 @@ function App() {
     setElapsedTime(0);
     setInfoMessage(null);
     setTeamName("");
+    setHouse(undefined);
   };
 
   const saveTime = () => {
@@ -94,6 +140,7 @@ function App() {
     const entry: ScoreEntry = {
       name: teamName,
       time: elapsedTime.toString(),
+      house: house,
     };
     const newData = [...data, entry];
     // setData(newData);
@@ -104,8 +151,7 @@ function App() {
   const deleteItem = (index: number) => {
     if (data === null) return;
     console.log("removing at", index, "from:", data);
-    let newData = data;
-    newData.splice(index, 1);
+    const newData = [...data.slice(0, index), ...data.slice(index + 1)];
     updateData(newData);
   };
 
@@ -118,63 +164,106 @@ function App() {
       .padStart(2, "0")}.${milliseconds.toString().padStart(2, "0")}`;
   };
 
-  return (
-    <div className="App">
-      <header className="App-header">
-        {infoMessage && (
-          <Alert
-            severity={infoMessage.severity}
-            style={{ position: "absolute", top: "10%", right: "5%" }}
-            onClick={() => setInfoMessage(null)}
-          >
-            {infoMessage.message}
-          </Alert>
-        )}
-        <StyledTextField
-          value={teamName}
-          onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
-            setTeamName(event.target.value)
-          }
-          label="Team Name"
-          variant="outlined"
-          style={{
-            marginBottom: "2rem",
-            width: "300px",
-          }}
-        />
+  const handleHouseChange = (event: SelectChangeEvent) => {
+    setHouse(event.target.value as string);
+  };
 
-        <Typography
-          variant="h2"
-          style={{ fontFamily: "monospace", marginBottom: "2rem" }}
-        >
-          {formatTime(elapsedTime)}
-        </Typography>
-        <Stack direction="row" spacing={2}>
-          {!isRunning ? (
-            <Button variant="contained" color="primary" onClick={startTimer}>
-              Start
-            </Button>
-          ) : (
-            <Button variant="contained" color="secondary" onClick={stopTimer}>
-              Stop
-            </Button>
+  return (
+    <ThemeProvider theme={darkTheme}>
+      <CssBaseline />
+      <div className="App">
+        <header className="App-header">
+          {infoMessage && (
+            <Alert
+              severity={infoMessage.severity}
+              style={{ position: "absolute", top: "10%", right: "5%" }}
+              onClick={() => setInfoMessage(null)}
+            >
+              {infoMessage.message}
+            </Alert>
           )}
-          <Button variant="outlined" onClick={resetTimer}>
-            Reset
-          </Button>
-          <Button variant="contained" color="secondary" onClick={saveTime}>
-            Save
-          </Button>
-        </Stack>
-        {data && (
-          <LeaderboardList
-            data={data}
-            formatTime={formatTime}
-            onItemDelete={deleteItem}
-          />
-        )}
-      </header>
-    </div>
+          <Stack direction="row" spacing={2}>
+            <StyledTextField
+              value={teamName}
+              onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
+                setTeamName(event.target.value)
+              }
+              label="Team Name"
+              variant="outlined"
+              style={{
+                marginBottom: "2rem",
+                width: "300px",
+                height: "60px",
+              }}
+            />
+            <Select
+              value={house || ""}
+              onChange={handleHouseChange}
+              variant="outlined"
+              sx={{
+                marginBottom: "2rem",
+                width: "150px",
+                height: "60px",
+                "& .MuiOutlinedInput-notchedOutline": {
+                  borderColor: "rgba(255, 255, 255, 0.23)",
+                },
+                "&:hover .MuiOutlinedInput-notchedOutline": {
+                  borderColor: "rgba(255, 255, 255, 0.87)",
+                },
+                "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                  borderColor: "white",
+                },
+              }}
+              displayEmpty
+            >
+              <MenuItem value="">Select House</MenuItem>
+              <MenuItem value="green" sx={{ color: "#4caf50" }}>
+                Green
+              </MenuItem>
+              <MenuItem value="blue" sx={{ color: "#2196f3" }}>
+                Blue
+              </MenuItem>
+              <MenuItem value="yellow" sx={{ color: "#ffeb3b" }}>
+                Yellow
+              </MenuItem>
+              <MenuItem value="red" sx={{ color: "#f44336" }}>
+                Red
+              </MenuItem>
+            </Select>
+          </Stack>
+          <Typography
+            variant="h2"
+            style={{ fontFamily: "monospace", marginBottom: "2rem" }}
+          >
+            {formatTime(elapsedTime)}
+          </Typography>
+          <Stack direction="row" spacing={2}>
+            {!isRunning ? (
+              <Button variant="contained" color="primary" onClick={startTimer}>
+                Start
+              </Button>
+            ) : (
+              <Button variant="contained" color="secondary" onClick={stopTimer}>
+                Stop
+              </Button>
+            )}
+            <Button variant="outlined" onClick={resetTimer}>
+              Reset
+            </Button>
+            <Button variant="contained" color="success" onClick={saveTime}>
+              Save
+            </Button>
+          </Stack>
+          {data && (
+            <LeaderboardList
+              data={data}
+              formatTime={formatTime}
+              onItemDelete={deleteItem}
+            />
+          )}
+        </header>
+      </div>
+    </ThemeProvider>
   );
 }
 
